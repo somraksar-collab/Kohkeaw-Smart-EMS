@@ -1,0 +1,1261 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ระบบ Kohkeaw Smart EMS V.4.9.1</title>
+    <link rel="icon" type="image/jpeg" sizes="192x192" href="https://esvector.net/home_es/images/stories/logo/09-11/krokkaw.jpg">
+    <link rel="apple-touch-icon" sizes="180x180" href="https://esvector.net/home_es/images/stories/logo/09-11/krokkaw.jpg">
+    <link rel="manifest" href='data:application/manifest+json,{"name":"Kohkeaw Smart EMS","short_name":"EMS เกาะแก้ว","display":"standalone","start_url":".","background_color":"#f1f5f9","theme_color":"#0a0e1a","icons":[{"src":"https://esvector.net/home_es/images/stories/logo/09-11/krokkaw.jpg","sizes":"192x192","type":"image/jpeg"},{"src":"https://esvector.net/home_es/images/stories/logo/09-11/krokkaw.jpg","sizes":"512x512","type":"image/jpeg"}]}'>
+    <meta name="apple-mobile-web-app-title" content="EMS เกาะแก้ว">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#0a0e1a">
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <?!= include('CSS'); ?>
+    <script>const isPublicUrl = <?= publicMode ?>;</script>
+    <style>
+        /* ===== PRINT ===== */
+        @media print {
+            body { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+            .avoid-page-break { break-inside: avoid !important; page-break-inside: avoid !important; margin-bottom: 20px; }
+            @page { size: A4 portrait; margin: 10mm 15mm; }
+            ::-webkit-scrollbar { display: none; }
+            #global-footer { display: none !important; }
+        }
+
+        /* ===== BASE ===== */
+        * { box-sizing: border-box; }
+        body, html { font-family: 'Prompt', sans-serif; }
+        .mono-time { font-variant-numeric: tabular-nums; }
+
+        /* ===== SHIMMER ===== */
+        .logo-shimmer-wrapper { position: relative; overflow: hidden; display: inline-block; border-radius: 50%; }
+        .logo-shimmer-wrapper::after {
+            content: ''; position: absolute; top: 0; left: -150%; width: 50%; height: 100%;
+            background: linear-gradient(to right, rgba(255,255,255,0) 0%, rgba(255,255,255,0.8) 50%, rgba(255,255,255,0) 100%);
+            transform: skewX(-25deg); animation: shimmerAnim 4s infinite; z-index: 10; pointer-events: none;
+        }
+        @keyframes shimmerAnim { 0% { left: -150%; } 50% { left: 200%; } 100% { left: 200%; } }
+
+        /* ===== ORG CHART ===== */
+        .org-line::after {
+            content: ''; position: absolute; top: 100%; left: 50%; width: 2px; height: 32px;
+            background-color: #bfdbfe; transform: translateX(-50%); z-index: 0;
+        }
+        .org-row:last-child .org-line::after { display: none; }
+
+        /* ===== MASCOT BUBBLE ===== */
+        @keyframes popFadeInOut {
+            0%, 100% { opacity: 0; transform: translateY(10px) scale(0.9); }
+            10%, 40% { opacity: 1; transform: translateY(0) scale(1); }
+            50% { opacity: 0; transform: translateY(-10px) scale(0.9); }
+        }
+        .bubble-nudge { animation: popFadeInOut 12s ease-in-out infinite; }
+
+        /* ===== SIDEBAR DARK PREMIUM ===== */
+        #sidebar {
+            background: linear-gradient(160deg, #0d1b3e 0%, #0a1628 40%, #0f2044 70%, #070d1f 100%);
+            border-right: 1px solid rgba(100,149,237,0.15);
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* ดาวระยิบระยับ */
+        .star-field {
+            position: absolute; top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none; z-index: 0;
+            overflow: hidden;
+        }
+        .star {
+            position: absolute; border-radius: 50%;
+            background: white; animation: starTwinkle var(--dur) ease-in-out infinite;
+            opacity: 0;
+        }
+        @keyframes starTwinkle {
+            0%, 100% { opacity: 0; transform: scale(0.5); }
+            50% { opacity: var(--bright); transform: scale(1.2); }
+        }
+        @keyframes starDrift {
+            0% { transform: translateY(0px) translateX(0px); }
+            33% { transform: translateY(-3px) translateX(2px); }
+            66% { transform: translateY(2px) translateX(-2px); }
+            100% { transform: translateY(0px) translateX(0px); }
+        }
+
+        /* Nebula glow */
+        .nebula {
+            position: absolute; border-radius: 50%;
+            pointer-events: none; z-index: 0;
+            animation: nebulaFloat 8s ease-in-out infinite;
+        }
+        @keyframes nebulaFloat {
+            0%, 100% { transform: scale(1) translateY(0); opacity: 0.12; }
+            50% { transform: scale(1.1) translateY(-8px); opacity: 0.2; }
+        }
+
+        /* ทุก element ใน sidebar ต้องอยู่เหนือดาว */
+        #sidebar > *:not(.star-field) { position: relative; z-index: 1; }
+
+        /* Sidebar Logo Area */
+        .sidebar-logo-area {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 14px 16px; border-bottom: 1px solid rgba(255,255,255,0.07);
+            background: rgba(255,255,255,0.02);
+        }
+        .sidebar-logo-circle {
+            width: 34px; height: 34px; border-radius: 50%;
+            background: white; padding: 3px; flex-shrink: 0;
+            box-shadow: 0 0 14px rgba(239,68,68,0.25);
+            border: 1.5px solid rgba(239,68,68,0.35);
+            position: relative; overflow: hidden;
+        }
+        .sidebar-logo-circle img { width: 100%; height: 100%; object-fit: contain; border-radius: 50%; }
+        .sidebar-logo-circle::after {
+            content: ''; position: absolute; top: 0; left: -150%; width: 50%; height: 100%;
+            background: linear-gradient(to right, transparent, rgba(255,255,255,0.6), transparent);
+            transform: skewX(-20deg); animation: shimmerAnim 4s 1s infinite;
+        }
+
+        /* Sidebar User Profile */
+        #user-profile-section {
+            background: rgba(255,255,255,0.03) !important;
+            border-bottom: 1px solid rgba(255,255,255,0.07) !important;
+        }
+
+        /* Sidebar Nav Items */
+        #sidebar nav a {
+            border-radius: 12px !important; font-size: 0.875rem !important;
+            transition: all 0.2s !important; display: flex !important;
+            align-items: center !important; padding: 11px 14px !important;
+            color: rgba(148,163,184,1) !important; background: transparent !important;
+            border: 1px solid transparent !important; margin-bottom: 2px;
+        }
+        #sidebar nav a:hover {
+            background: rgba(255,255,255,0.07) !important;
+            color: white !important; border-color: rgba(255,255,255,0.08) !important;
+        }
+        #sidebar nav a.bg-white {
+            background: rgba(255,255,255,0.11) !important; color: white !important;
+            border-color: rgba(255,255,255,0.18) !important; font-weight: 700 !important;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.4) !important;
+        }
+        #sidebar .bg-blue-950 { background: rgba(255,255,255,0.03) !important; }
+        #sidebar .border-blue-800 { border-color: rgba(255,255,255,0.07) !important; }
+        #auth-btn { border-radius: 12px !important; font-weight: 700 !important; }
+
+        /* ===== MAIN CONTENT BG ===== */
+        #main-content, #scroll-area { background: #f1f5f9 !important; }
+        @media (max-width: 767px) {
+            #app-page { display: flex !important; }
+            #main-content { width: 100% !important; min-width: 0 !important; flex: 1 !important; }
+            #sidebar { width: 80% !important; max-width: 280px !important; position: absolute !important; }
+        }
+
+        /* ===== DASHBOARD HEADER CARD ===== */
+        .dash-header-card {
+            background: linear-gradient(135deg, #e8f4fd 0%, #dbeeff 50%, #e4f0fb 100%);
+            border-radius: 20px; padding: 16px 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 20px rgba(100,180,255,0.15), 0 1px 4px rgba(0,0,0,0.04);
+            border: 1px solid rgba(147,210,255,0.4);
+        }
+        .dash-title-text {
+            font-size: 1.2rem; font-weight: 800; line-height: 1.2;
+            background: linear-gradient(135deg, #1e3a8a, #dc2626);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        .datetime-pill {
+            display: inline-flex; align-items: center; gap: 4px;
+            background: rgba(255,255,255,0.7); border: 1px solid rgba(147,210,255,0.5);
+            border-radius: 20px; padding: 3px 8px;
+            font-size: 0.68rem; color: #475569; font-weight: 600;
+            backdrop-filter: blur(4px); white-space: nowrap;
+        }
+        .filter-wrap {
+            display: inline-flex; align-items: center; gap: 4px;
+            background: rgba(255,255,255,0.65);
+            border: 1.5px solid rgba(147,210,255,0.6);
+            border-radius: 12px; padding: 2px 4px;
+            backdrop-filter: blur(4px);
+        }
+        #timeFilter {
+            background: transparent !important; border: none !important;
+            font-weight: 700 !important; color: #1e3a8a !important;
+            outline: none !important; padding: 6px 6px !important;
+            cursor: pointer !important; border-radius: 10px !important;
+            font-size: 0.85rem !important;
+        }
+
+        /* Action Buttons */
+        .action-btn-row { display: flex; flex-wrap: wrap; gap: 7px; align-items: center; }
+        .abtn {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 8px 13px; border-radius: 12px; font-size: 0.78rem;
+            font-weight: 700; border: none; cursor: pointer; transition: all 0.18s;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.12); font-family: 'Prompt', sans-serif;
+            white-space: nowrap;
+        }
+        .abtn:hover { transform: translateY(-1px); filter: brightness(1.08); }
+        .abtn:active { transform: scale(0.96); }
+        .abtn-indigo { background: #6366f1; color: white; }
+        .abtn-green  { background: #10b981; color: white; }
+        .abtn-dark   { background: #1e293b; color: white; }
+        .abtn-red    { background: linear-gradient(135deg,#dc2626,#991b1b); color: white; box-shadow: 0 4px 14px rgba(220,38,38,0.35); }
+        .ai-pill {
+            display: inline-flex; align-items: center; gap: 5px;
+            background: rgba(99,102,241,0.07); border: 1.5px solid rgba(99,102,241,0.18);
+            border-radius: 14px; padding: 4px 6px;
+        }
+        .abtn-ai-report { background: rgba(99,102,241,0.13); color: #4338ca; border-radius: 10px; padding: 7px 11px; font-size: 0.77rem; font-weight: 700; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; font-family: 'Prompt', sans-serif; transition: all 0.18s; }
+        .abtn-ai-risk   { background: rgba(239,68,68,0.1);  color: #dc2626; border-radius: 10px; padding: 7px 11px; font-size: 0.77rem; font-weight: 700; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; font-family: 'Prompt', sans-serif; transition: all 0.18s; }
+        .abtn-ai-report:hover, .abtn-ai-risk:hover { transform: translateY(-1px); }
+
+        /* ===== STAT CARDS ===== */
+        .scard {
+            background: white; border-radius: 18px; padding: 16px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.06); border: 1px solid rgba(0,0,0,0.04);
+            position: relative; overflow: hidden; transition: all 0.25s;
+        }
+        .scard:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.1); }
+        .scard::before {
+            content: ''; position: absolute; top: 0; left: 0; right: 0;
+            height: 3px; border-radius: 18px 18px 0 0;
+        }
+        .sc-blue::before   { background: linear-gradient(90deg,#3b82f6,#60a5fa); }
+        .sc-red::before    { background: linear-gradient(90deg,#ef4444,#f87171); }
+        .sc-yellow::before { background: linear-gradient(90deg,#f59e0b,#fbbf24); }
+        .sc-pink::before   { background: linear-gradient(90deg,#ec4899,#f472b6); }
+        .sc-green::before  { background: linear-gradient(90deg,#10b981,#34d399); }
+        .sc-neutral::before { background: linear-gradient(90deg,#94a3b8,#cbd5e1); }
+        .scard-icon {
+            width: 40px; height: 40px; border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.1rem; margin-bottom: 10px;
+        }
+        .si-blue   { background: rgba(59,130,246,0.1);  color: #3b82f6; }
+        .si-red    { background: rgba(239,68,68,0.1);   color: #ef4444; }
+        .si-yellow { background: rgba(245,158,11,0.1);  color: #f59e0b; }
+        .si-pink   { background: rgba(236,72,153,0.1);  color: #ec4899; }
+        .si-green  { background: rgba(16,185,129,0.1);  color: #10b981; }
+        .si-neutral { background: rgba(100,116,139,0.1); color: #64748b; }
+
+        /* ===== CHART CARDS ===== */
+        .ccard {
+            background: white; border-radius: 18px; padding: 18px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.06); border: 1px solid rgba(0,0,0,0.04);
+            transition: box-shadow 0.25s;
+        }
+        .ccard:hover { box-shadow: 0 6px 20px rgba(0,0,0,0.1); }
+        .ccard-head {
+            display: flex; align-items: center; gap: 8px;
+            margin-bottom: 14px; padding-bottom: 10px;
+            border-bottom: 1px solid #f1f5f9;
+            font-weight: 700; font-size: 0.88rem; color: #1e293b;
+        }
+        .ccard-icon {
+            width: 30px; height: 30px; border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.85rem; flex-shrink: 0;
+        }
+        .ci-blue   { background: rgba(59,130,246,0.1);  color: #3b82f6; }
+        .ci-red    { background: rgba(239,68,68,0.1);   color: #ef4444; }
+        .ci-green  { background: rgba(16,185,129,0.1);  color: #10b981; }
+        .ci-purple { background: rgba(139,92,246,0.1);  color: #8b5cf6; }
+        .ci-orange { background: rgba(249,115,22,0.1);  color: #f97316; }
+        .ci-yellow { background: rgba(245,158,11,0.1);  color: #f59e0b; }
+        .ci-indigo { background: rgba(99,102,241,0.1);  color: #6366f1; }
+        .ci-sky    { background: rgba(14,165,233,0.1);  color: #0ea5e9; }
+        /* Swal mobile fix */
+        @media (max-width: 767px) {
+            .swal2-popup { width: 92% !important; font-size: 0.85rem !important; }
+            .swal2-title { font-size: 1.1rem !important; line-height: 1.4 !important; }
+            .swal2-html-container { font-size: 0.82rem !important; }
+        }
+
+        /* ===== SIDEBAR COLLAPSE (V.4.9.2) ===== */
+        #sidebar {
+            transition: transform 0.3s cubic-bezier(0.4,0,0.2,1) !important;
+            /* Sidebar เป็น absolute เสมอ ไม่กิน space */
+            position: absolute !important;
+            height: 100% !important;
+            z-index: 30 !important;
+        }
+        /* ซ่อน Sidebar */
+        #sidebar.sidebar-hidden {
+            transform: translateX(-100%) !important;
+        }
+        /* Main content เต็มจอเสมอ เพราะ sidebar เป็น absolute */
+        #main-content {
+            width: 100% !important;
+            flex: 1 !important;
+        }
+        /* Overlay ทำงานทุกขนาดจอเมื่อ sidebar เปิด */
+        #sidebar-overlay.show {
+            display: block !important;
+        }
+
+        /* ===== TOP HEADER BAR ใหญ่ขึ้น ===== */
+        #top-header-bar .hdr-logo {
+            width: 48px !important; height: 48px !important;
+        }
+        #top-header-bar .hdr-title {
+            font-size: clamp(0.95rem, 2.5vw, 1.25rem) !important;
+            font-weight: 800 !important;
+        }
+        #top-header-bar .hdr-sub {
+            font-size: 0.68rem !important;
+        }
+        #top-header-bar {
+            padding-top: 4px !important;
+            padding-bottom: 4px !important;
+        }
+
+        /* ===== TOP HEADER BAR ===== */
+        #top-header-bar {
+            background: linear-gradient(135deg, #0f2044 0%, #1e3a8a 60%, #1e2d6b 100%);
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            box-shadow: 0 2px 12px rgba(0,0,0,0.2);
+            flex-shrink: 0;
+            position: relative;
+            z-index: 10;
+        }
+        #top-header-bar .hdr-logo {
+            width: 36px; height: 36px; border-radius: 50%;
+            background: white; padding: 2px;
+            border: 1.5px solid rgba(255,255,255,0.35);
+            box-shadow: 0 0 10px rgba(255,255,255,0.15);
+            flex-shrink: 0;
+            object-fit: contain;
+        }
+        #top-header-bar .hdr-title {
+            font-size: clamp(0.75rem, 1.8vw, 0.95rem);
+            font-weight: 800; color: white; line-height: 1.2;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        #top-header-bar .hdr-sub {
+            font-size: 0.58rem; color: rgba(255,255,255,0.5); margin-top: 1px;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        #top-header-bar .hdr-pill {
+            display: inline-flex; align-items: center; gap: 5px;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 20px; padding: 3px 10px;
+            font-size: 0.68rem; color: rgba(255,255,255,0.85); font-weight: 600;
+            white-space: nowrap;
+        }
+        #btn-toggle-sidebar {
+            width: 36px; height: 36px; border-radius: 8px;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: white; display: flex; align-items: center; justify-content: center;
+            cursor: pointer; transition: background 0.2s; flex-shrink: 0; font-size: 1rem;
+        }
+        #btn-toggle-sidebar:hover { background: rgba(255,255,255,0.2); }
+
+        /* ===== MOBILE HEADER 2-ROW FIX ===== */
+#top-header-bar .hdr-inner {
+    display: flex;
+    flex-wrap: wrap;          /* อนุญาตให้ขึ้นบรรทัดใหม่ */
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+}
+#top-header-bar .hdr-left-group {
+    display: flex; align-items: center;
+    gap: 6px; flex-shrink: 0;
+}
+#top-header-bar .hdr-name-wrap {
+    flex: 1 1 180px; min-width: 0; overflow: hidden;
+}
+#top-header-bar .hdr-right-pills {
+    display: flex; align-items: center;
+    gap: 6px; flex-shrink: 0; margin-left: auto;
+}
+/* มือถือ: ดันชื่อระบบลงแถว 2 */
+@media (max-width: 600px) {
+    #top-header-bar .hdr-name-wrap {
+        order: 10;               /* ดันไปท้าย → ขึ้นแถวใหม่ */
+        flex: 0 0 100%;          /* เต็มแถว */
+        padding: 3px 4px 4px;
+        border-top: 1px solid rgba(255,255,255,0.1);
+    }
+    #top-header-bar .hdr-title {
+        font-size: 0.88rem !important;
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    #top-header-bar .hdr-sub { display: none; }  /* ซ่อน subtitle */
+    #top-header-bar .hdr-pill {
+        font-size: 0.6rem !important;
+        padding: 3px 7px !important;
+        white-space: nowrap;
+    }
+}
+
+        /* ===== CONTROLS BAR ===== */
+        #controls-bar {
+            background: white;
+            border-bottom: 1px solid #e2e8f0;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+            padding: 7px 16px;
+            display: flex; align-items: center; gap: 8px;
+            flex-wrap: wrap; flex-shrink: 0; z-index: 9; position: relative;
+        }
+        #controls-bar .ctrl-sep {
+            width: 1px; height: 22px; background: #e2e8f0; flex-shrink: 0;
+        }
+        #controls-bar .ctrl-label {
+            font-size: 0.72rem; font-weight: 700; color: #64748b; white-space: nowrap;
+        }
+
+        /* ซ่อน header card title row เดิม (ย้ายไป top bar แล้ว) */
+        .dash-hdr-hide { display: none !important; }
+
+        /* ซ่อน dash-header-card ทั้งกล่อง ไม่กิน space */
+        #action-buttons { display: none !important; margin: 0 !important; padding: 0 !important; height: 0 !important; overflow: hidden !important; }
+
+        /* ===== MORE ACTIONS DROPDOWN (V.4.9.3) ===== */
+        #more-actions-menu {
+            box-shadow: 0 12px 32px rgba(0,0,0,0.16), 0 2px 8px rgba(0,0,0,0.08);
+        }
+        #more-actions-menu button i { width: 16px; text-align: center; }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800 overflow-hidden relative">
+
+    <!-- ===== LOGIN PAGE ===== -->
+    <div id="login-page" class="hidden fixed inset-0 flex items-center justify-center bg-blue-900 bg-opacity-95 p-4 z-[100]">
+        <div class="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-md text-center">
+            <div class="flex items-center justify-center gap-6 mb-6">
+                <div class="logo-shimmer-wrapper w-20 h-20 p-1 bg-white rounded-full shadow border border-gray-200">
+                    <img src="https://esvector.net/home_es/images/stories/logo/09-11/krokkaw.jpg" class="w-full h-full object-contain rounded-full">
+                </div>
+                <div class="logo-shimmer-wrapper w-20 h-20 p-1 bg-white rounded-full shadow border border-gray-200">
+                    <img src="https://i.postimg.cc/QtJQxPnS/Asset-1.png" class="w-full h-full object-contain rounded-full">
+                </div>
+            </div>
+            <h1 class="text-xl font-bold text-gray-800 mb-6">เข้าสู่ระบบ<br><span class="text-blue-800">Kohkeaw Smart EMS</span></h1>
+            <form id="loginForm" onsubmit="event.preventDefault(); handleLogin();">
+                <input type="text" id="username" placeholder="ชื่อผู้ใช้งาน" class="w-full mb-4 px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-600 text-lg outline-none">
+                <input type="password" id="password" placeholder="รหัสผ่าน" class="w-full mb-6 px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-600 text-lg outline-none">
+                <button type="submit" class="w-full bg-blue-800 text-white py-3 rounded-xl hover:bg-blue-900 font-bold text-lg shadow-md transition">เข้าสู่ระบบ <i class="fa-solid fa-arrow-right ml-1"></i></button>
+            </form>
+            <div class="mt-5 border-t pt-5">
+                <button type="button" onclick="cancelLogin()" class="w-full bg-gray-100 text-gray-700 py-3 rounded-xl font-bold text-lg transition hover:bg-gray-200"><i class="fa-solid fa-arrow-left mr-2"></i> ยกเลิก / กลับแดชบอร์ด</button>
+            </div>
+            <p class="mt-5 text-[11px] text-gray-400">© 2026 Kohkeaw Smart EMS</p>
+        </div>
+    </div>
+
+    <!-- ===== MASCOT ===== -->
+    <div id="cute-mascot" class="fixed z-50 flex flex-col items-center" style="bottom: 24px; right: 24px; z-index: 1000;">
+        <div id="mascot-img" class="cursor-pointer relative flex items-center justify-center w-20 h-20 md:w-28 md:h-28 rounded-full" ondblclick="openChatbot()" title="ดับเบิ้ลคลิกเพื่อคุย">
+            <div class="bubble-nudge absolute -top-4 md:-top-2 right-4 md:right-8 bg-white text-blue-800 text-[10px] md:text-xs font-bold px-4 py-2 rounded-2xl rounded-br-sm shadow-xl border-2 border-blue-100 whitespace-nowrap z-20 pointer-events-none">
+                ดับเบิ้ลคลิกคุยกับน้องกู้ใจได้นะเมี้ยว! 👋
+            </div>
+            <img src="https://i.postimg.cc/18GJWQZK/nong-koo-jai.png" alt="น้องกู้ใจ" class="absolute w-32 h-32 md:w-40 md:h-40 max-w-none object-contain pointer-events-none transform transition-transform hover:scale-110 drop-shadow-[0_10px_10px_rgba(0,0,0,0.3)] filter brightness-105">
+        </div>
+        <div id="mascot-dialog" class="hidden bg-white rounded-2xl shadow-2xl border border-blue-300 flex-col w-[300px] h-[400px] origin-bottom-right mt-4">
+            <button onclick="closeChatbot(event)" class="absolute -top-3 -right-3 bg-red-500 text-white rounded-full w-8 h-8 flex items-center justify-center shadow-lg hover:bg-red-600 z-10 text-sm cursor-pointer"><i class="fa-solid fa-times"></i></button>
+            <div class="bg-blue-800 text-white p-3 rounded-t-2xl font-bold text-center text-sm flex items-center justify-center gap-2 cursor-move" id="chat-drag-handle"><i class="fa-solid fa-robot"></i> คุยกับน้องกู้ใจ AI 😸</div>
+            <div id="chat-history" class="flex-1 p-3 overflow-y-auto bg-gray-50 flex flex-col gap-3 text-xs border-x border-blue-100">
+                <div class="self-start bg-white border border-gray-200 p-3 rounded-xl rounded-tl-none shadow-sm max-w-[95%] text-gray-700 leading-relaxed" id="chat-welcome-msg"></div>
+            </div>
+            <div id="chat-call-btn" class="px-3 pb-2 bg-gray-50 border-x border-blue-100 hidden">
+                <a href="tel:1669" class="block w-full bg-red-600 text-white text-center py-2 rounded-xl font-bold text-sm shadow animate-pulse"><i class="fa-solid fa-phone-volume mr-1"></i> 1669</a>
+            </div>
+            <div class="p-2 border-t border-b border-x border-blue-100 flex gap-2 bg-white rounded-b-2xl">
+                <input type="text" id="chat-input" placeholder="พิมพ์ข้อความ..." class="flex-1 border border-gray-300 p-2 rounded-lg text-sm outline-none focus:border-blue-500 text-gray-800" onkeypress="if(event.key==='Enter') sendChatMessage()">
+                <button onclick="sendChatMessage()" class="bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 transition"><i class="fa-solid fa-paper-plane"></i></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== APP ===== -->
+    <div id="app-page" class="flex h-screen overflow-hidden" style="width:100%;max-width:100%;">
+
+        <!-- SIDEBAR -->
+        <aside id="sidebar" class="text-white w-64 flex-shrink-0 flex flex-col sidebar-hidden">
+
+            <!-- Sidebar Header -->
+            <div class="sidebar-logo-area">
+                <div class="flex items-center gap-2.5">
+                    <div class="flex items-center gap-1.5">
+                        <span class="relative flex h-2.5 w-2.5 flex-shrink-0">
+                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                            <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500"></span>
+                        </span>
+                        <i class="fa-solid fa-truck-medical text-red-400 text-base"></i>
+                    </div>
+                    <div>
+                        <div class="text-[13px] font-extrabold text-white tracking-wide leading-tight">Kohkeaw Smart EMS</div>
+                        <div class="text-[10px] text-slate-400 tracking-wider">Version 4.9.1</div>
+                    </div>
+                </div>
+                <button onclick="toggleSidebar()" class="md:hidden p-1 text-slate-400 hover:text-white">
+                    <i class="fa-solid fa-times text-lg"></i>
+                </button>
+            </div>
+
+            <!-- User Profile -->
+            <div id="user-profile-section" class="px-4 py-3 flex items-center gap-3" style="border-bottom: 1px solid rgba(255,255,255,0.07); background: rgba(0,0,0,0.15);">
+                <div class="w-9 h-9 rounded-full flex items-center justify-center text-white text-base flex-shrink-0" style="background: rgba(255,255,255,0.1); border: 1.5px solid rgba(255,255,255,0.15);">
+                    <i class="fa-solid fa-user"></i>
+                </div>
+                <div class="overflow-hidden flex-1">
+                    <div class="flex justify-between items-center">
+                        <p class="text-[10px] text-slate-500">สถานะ</p>
+                        <button id="btn-change-pwd" onclick="openChangePassword()" class="hidden text-[10px] px-2 py-0.5 rounded transition" style="background: rgba(255,255,255,0.08); color: #94a3b8;" title="เปลี่ยนรหัสผ่าน"><i class="fa-solid fa-key mr-1"></i>เปลี่ยนรหัส</button>
+                    </div>
+                    <div class="font-bold text-yellow-400 w-full text-sm" id="display-user-name">กำลังโหลด...</div>
+                </div>
+            </div>
+
+            <!-- Nav -->
+            <nav class="flex-1 p-3 space-y-1 overflow-y-auto pb-20">
+                <a href="javascript:void(0);" id="menu-dashboard" onclick="switchView('dashboard')" class="block p-3 bg-white text-blue-900 rounded font-bold transition"><i class="fa-solid fa-chart-pie mr-2"></i> แดชบอร์ดสรุปผล</a>
+                <a href="javascript:void(0);" id="menu-team" onclick="switchView('team')" class="block p-3 text-gray-300 hover:bg-blue-800 rounded transition"><i class="fa-solid fa-users mr-2"></i> ทำเนียบเจ้าหน้าที่</a>
+                <a href="javascript:void(0);" id="menu-form" onclick="switchView('form')" class="block p-3 text-gray-300 hover:bg-blue-800 rounded transition"><i class="fa-solid fa-plus-circle mr-2"></i> บันทึกเคสใหม่</a>
+                <a href="javascript:void(0);" id="menu-manage" onclick="switchView('manage')" class="block p-3 text-gray-300 hover:bg-blue-800 rounded transition"><i class="fa-solid fa-list mr-2"></i> จัดการข้อมูล</a>
+            </nav>
+
+            <!-- Credits -->
+            <div class="p-4 text-xs leading-relaxed" style="border-top: 1px solid rgba(255,255,255,0.07); background: rgba(0,0,0,0.2);">
+                <p class="font-bold text-white mb-2.5 pb-1.5" style="border-bottom: 1px solid rgba(255,255,255,0.1);"><i class="fa-solid fa-medal text-yellow-400 mr-1"></i> คณะผู้จัดทำ</p>
+                <p class="text-slate-500 text-[10px]">ริเริ่มนโยบายและอำนวยการโดย:</p>
+                <p class="font-bold text-white text-sm">นายสิทธิศักดิ์ ทองคำ</p>
+                <p class="text-[10px] text-slate-500 mb-2.5">ผู้อำนวยการกองสาธารณสุขและสิ่งแวดล้อม</p>
+                <p class="text-slate-500 text-[10px]">ออกแบบและพัฒนาระบบโดย:</p>
+                <p class="font-bold text-white text-sm">นายสมรักษ์ สารภี</p>
+                <p class="text-[10px] text-slate-500">นักวิชาการสาธารณสุขชำนาญการ</p>
+            </div>
+
+            <!-- Call Button (hidden by default) -->
+            <div id="sidebar-call-btn" class="px-4 pt-3 hidden" style="border-top: 1px solid rgba(255,255,255,0.07);">
+                <a href="tel:1669" class="block w-full bg-red-600 hover:bg-red-700 text-white text-center p-3 rounded-xl font-bold transition shadow-lg animate-pulse"><i class="fa-solid fa-phone-volume mr-1"></i> โทรสายด่วน 1669</a>
+            </div>
+
+            <!-- Auth Button -->
+            <div class="p-4" style="border-top: 1px solid rgba(255,255,255,0.07);">
+                <button id="auth-btn" onclick="showLogin()" class="w-full bg-blue-600 hover:bg-blue-700 text-white p-3 rounded font-bold transition shadow-lg">
+                    <i id="auth-icon" class="fa-solid fa-right-to-bracket"></i> <span id="btn-auth-text">เจ้าหน้าที่เข้าสู่ระบบ</span>
+                </button>
+            </div>
+        </aside>
+
+        <div id="sidebar-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black bg-opacity-50 z-20 hidden"></div>
+
+        <!-- MAIN -->
+        <main class="flex-1 flex flex-col h-screen relative" id="main-content" style="background: #f1f5f9; width:100%; min-width:0; overflow-x:hidden;">
+
+            <!-- ✅ แก้ Bug #1: ลบ id="mobile-header" ที่ซ้ำออก -->
+<div id="top-header-bar">
+    <div class="hdr-inner">
+
+        <!-- กลุ่มซ้าย: hamburger + โลโก้ -->
+        <div class="hdr-left-group">
+            <button id="btn-toggle-sidebar" onclick="toggleSidebar()" title="เปิด/ปิดเมนู">
+                <i class="fa-solid fa-bars"></i>
+            </button>
+            <img src="https://esvector.net/home_es/images/stories/logo/09-11/krokkaw.jpg" class="hdr-logo">
+            <img src="https://i.postimg.cc/QtJQxPnS/Asset-1.png" class="hdr-logo">
+        </div>
+
+        <!-- ชื่อระบบ (ลงแถว 2 บนมือถือ ผ่าน order:10) -->
+        <div class="hdr-name-wrap">
+            <div class="hdr-title">ระบบบริหารจัดการการแพทย์ฉุกเฉิน Kohkeaw Smart EMS</div>
+            <div class="hdr-sub">กองสาธารณสุขและสิ่งแวดล้อม องค์การบริหารส่วนตำบลเกาะแก้ว</div>
+        </div>
+
+        <!-- กลุ่มขวา: วัน + เวลา + LIVE (แถว 1 ทุกขนาดจอ) -->
+        <div class="hdr-right-pills">
+            <!-- ✅ แก้ Time cut off: ลบ hidden sm:inline-flex → แสดงทุกจอ -->
+            <div class="hdr-pill">
+                <i class="fa-solid fa-calendar-days text-blue-300 text-xs"></i>
+                <span id="real-time-date-hdr">กำลังโหลด...</span>
+            </div>
+            <div class="hdr-pill">
+                <i class="fa-solid fa-clock text-red-300 text-xs"></i>
+                <span id="real-time-clock-hdr" class="mono-time">00:00:00</span> น.
+            </div>
+            <!-- LIVE badge: เฉพาะ desktop -->
+            <div class="hidden md:flex items-center gap-1.5 bg-red-500 bg-opacity-20 border border-red-400 border-opacity-40 rounded-full px-2.5 py-1 flex-shrink-0">
+                <span class="relative flex h-2 w-2 flex-shrink-0">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                </span>
+                <span class="text-red-300 text-[10px] font-bold tracking-wider">LIVE</span>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+            <!-- CONTROLS BAR -->
+            <div id="controls-bar">
+                <!-- Filter -->
+                <span class="ctrl-label"><i class="fa-solid fa-filter mr-1 text-blue-400"></i>ช่วงเวลา:</span>
+                <div class="filter-wrap">
+                    <select id="timeFilter" onchange="handleFilterChange()">
+                        <option value="all">ทั้งหมด (All Time)</option>
+                        <option value="today">วันนี้</option>
+                        <option value="custom_date">เลือกวันที่...</option>
+                        <option value="month" selected>เดือนนี้</option>
+                        <option value="custom">เลือกเดือน...</option>
+                        <option value="this_year">ปีนี้</option>
+                        <option value="custom_year">เลือกปี...</option>
+                    </select>
+                    <input type="date" id="customDate" onchange="processData()" class="hidden border-none bg-transparent text-sm font-bold text-blue-800 outline-none cursor-pointer px-1">
+                    <input type="month" id="customMonth" onchange="processData()" class="hidden border-none bg-transparent text-sm font-bold text-blue-800 outline-none cursor-pointer px-1">
+                    <input type="number" id="customYear" onchange="processData()" class="hidden border-none bg-transparent text-sm font-bold text-blue-800 outline-none cursor-pointer w-20 text-center px-1" placeholder="พ.ศ." min="2560" max="2600">
+                </div>
+                <div class="ctrl-sep hidden sm:block"></div>
+                <!-- Action Buttons -->
+                <div class="action-btn-row ml-auto">
+                    <!-- Mobile: ปุ่มออกเหตุ -->
+                    <button onclick="goToDispatchMode()" class="md:hidden abtn abtn-red" style="padding:7px 12px; font-size:0.82rem;">
+                        <i class="fa-solid fa-siren-on"></i><span>ออกเหตุ</span>
+                    </button>
+                    <!-- Desktop: ปุ่มออกเหตุ -->
+                    <button onclick="goToDispatchMode()" class="hidden md:inline-flex abtn abtn-red" style="padding:8px 14px; font-size:0.82rem;">
+                        <i class="fa-solid fa-siren-on"></i><span>โหมดออกเหตุ</span>
+                    </button>
+                    <div class="relative" id="more-actions-wrap">
+                        <button onclick="toggleMoreActions()" id="btn-more-actions" class="abtn abtn-dark">
+                            <i class="fa-solid fa-ellipsis-vertical"></i><span>เพิ่มเติม</span>
+                        </button>
+                        <div id="more-actions-menu" class="hidden absolute right-0 mt-2 w-56 bg-white rounded-xl border border-gray-100 py-2 z-[80]">
+                            <button onclick="exportToImage(); closeMoreActions();" class="w-full text-left px-4 py-2.5 text-sm font-bold text-gray-700 hover:bg-indigo-50 flex items-center gap-3"><i class="fa-solid fa-image text-indigo-500"></i> แคปเจอร์</button>
+                            <button id="btn-exec-report" onclick="previewExecutiveReport(); closeMoreActions();" class="w-full text-left px-4 py-2.5 text-sm font-bold text-gray-700 hover:bg-emerald-50 flex items-center gap-3"><i class="fa-solid fa-file-pdf text-emerald-500"></i> รายงาน</button>
+                            <button onclick="toggleLEDMode(); closeMoreActions();" class="w-full text-left px-4 py-2.5 text-sm font-bold text-gray-700 hover:bg-gray-100 flex items-center gap-3"><i class="fa-solid fa-tv text-gray-500"></i> จอ LED</button>
+                            <div class="border-t border-gray-100 my-1"></div>
+                            <button onclick="openAIReportModal(); closeMoreActions();" class="w-full text-left px-4 py-2.5 text-sm font-bold text-indigo-700 hover:bg-indigo-50 flex items-center gap-3"><i class="fa-solid fa-robot text-indigo-500"></i> AI สรุปรายงาน</button>
+                            <button onclick="openAIRiskModal(); closeMoreActions();" class="w-full text-left px-4 py-2.5 text-sm font-bold text-red-700 hover:bg-red-50 flex items-center gap-3"><i class="fa-solid fa-triangle-exclamation text-red-500"></i> จุดเสี่ยง</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex-1 overflow-y-auto p-4 md:p-5 w-full relative pb-20" id="scroll-area">
+
+                <!-- LED/Report buttons -->
+                <button id="exit-led-btn" onclick="exitLEDMode()" class="hidden fixed bottom-[90px] left-6 bg-red-600 text-white px-6 py-3 rounded-full font-bold z-[60] shadow-2xl"><i class="fa-solid fa-compress mr-2"></i> ออกจากโหมด LED</button>
+                <div id="report-preview-actions" class="hidden fixed bottom-[90px] left-6 flex flex-col md:flex-row gap-3 z-[60]">
+                    <button onclick="closePreviewReport()" class="bg-gray-600 text-white px-6 py-3 rounded-full font-bold shadow-2xl"><i class="fa-solid fa-times mr-2"></i> ปิดพรีวิว</button>
+                    <button onclick="window.print()" class="bg-emerald-600 text-white px-6 py-3 rounded-full font-bold shadow-2xl"><i class="fa-solid fa-print mr-2"></i> พิมพ์ / PDF</button>
+                </div>
+
+                <!-- ===== DASHBOARD VIEW ===== -->
+                <div id="view-dashboard" class="w-full">
+
+                    <!-- LED Header -->
+                    <div id="led-header" class="hidden bg-blue-900 text-white p-4 md:p-6 items-center justify-between shadow-2xl mb-5 rounded-2xl border-b-4 border-red-500">
+                        <div class="flex items-center gap-4">
+                            <div class="logo-shimmer-wrapper w-16 h-16 md:w-20 md:h-20 bg-white p-1">
+                                <img src="https://esvector.net/home_es/images/stories/logo/09-11/krokkaw.jpg" class="w-full h-full rounded-full object-contain">
+                            </div>
+                            <div>
+                                <h1 class="text-xl md:text-3xl font-extrabold text-yellow-300">ศูนย์ปฏิบัติการ Kohkeaw Smart EMS</h1>
+                                <h2 class="text-md md:text-xl font-medium text-blue-100">องค์การบริหารส่วนตำบลเกาะแก้ว</h2>
+                            </div>
+                        </div>
+                        <div class="text-right hidden md:block">
+                            <div class="text-2xl font-bold text-red-400 animate-pulse mb-1"><i class="fa-solid fa-circle-dot text-sm"></i> LIVE DATA</div>
+                            <div class="text-sm text-blue-200 bg-blue-950 px-3 py-1 rounded-full border border-blue-800" id="led-timestamp">กำลังโหลด...</div>
+                        </div>
+                    </div>
+
+                    <!-- Dashboard Header Card -->
+                    <div class="dash-header-card" id="action-buttons">
+                        <!-- Row 1: Title (ซ่อนแล้ว ย้ายไป top-header-bar) -->
+                        <div class="flex items-center gap-3 mb-3 dash-hdr-hide">
+                            <div class="logo-shimmer-wrapper w-9 h-9 md:w-10 md:h-10 shadow border border-gray-200 bg-white p-[2px] flex-shrink-0">
+                                <img src="https://esvector.net/home_es/images/stories/logo/09-11/krokkaw.jpg" class="w-full h-full rounded-full object-contain">
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="dash-title-text" style="font-size: clamp(0.95rem, 3vw, 1.2rem);">ศูนย์ปฏิบัติการ Kohkeaw Smart EMS</div>
+                                <div class="flex flex-wrap items-center gap-1.5 mt-1">
+                                    <span class="datetime-pill"><i class="fa-solid fa-calendar-days text-blue-500"></i><span id="real-time-date">กำลังโหลด...</span></span>
+                                    <span class="datetime-pill"><i class="fa-solid fa-clock text-red-500"></i><span id="real-time-clock" class="mono-time">00:00:00</span> น.</span>
+                                </div>
+                            </div>
+                            <i class="fa-solid fa-heart-pulse text-red-500 animate-pulse text-xl hidden md:block flex-shrink-0"></i>
+                        </div>
+
+                        <!-- Row 2: Filter + Buttons (ซ่อนแล้ว ย้ายไป controls-bar) -->
+                        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 dash-hdr-hide">
+                            <!-- Filter -->
+                            <div class="filter-wrap">
+                                <i class="fa-solid fa-filter text-blue-400 text-xs ml-1"></i>
+                                <select id="timeFilter" onchange="handleFilterChange()">
+                                    <option value="all">ทั้งหมด (All Time)</option>
+                                    <option value="today">วันนี้</option>
+                                    <option value="custom_date">เลือกวันที่...</option>
+                                    <option value="month" selected>เดือนนี้</option>
+                                    <option value="custom">เลือกเดือน...</option>
+                                    <option value="this_year">ปีนี้</option>
+                                    <option value="custom_year">เลือกปี...</option>
+                                </select>
+                                <input type="date" id="customDate" onchange="processData()" class="hidden border-none bg-transparent text-sm font-bold text-blue-800 outline-none cursor-pointer px-1">
+                                <input type="month" id="customMonth" onchange="processData()" class="hidden border-none bg-transparent text-sm font-bold text-blue-800 outline-none cursor-pointer px-1">
+                                <input type="number" id="customYear" onchange="processData()" class="hidden border-none bg-transparent text-sm font-bold text-blue-800 outline-none cursor-pointer w-20 text-center px-1" placeholder="พ.ศ." min="2560" max="2600">
+                            </div>
+
+                            <!-- Action Buttons -->
+                            <div class="w-full md:w-auto">
+                                <!-- Mobile: ปุ่มออกเหตุใหญ่เต็มแถว -->
+                                <button onclick="goToDispatchMode()" class="md:hidden w-full abtn abtn-red mb-2 justify-center" style="padding: 12px 16px; font-size: 1rem;">
+                                    <i class="fa-solid fa-siren-on"></i> ออกเหตุด่วน!
+                                </button>
+                                <!-- ปุ่มรอง -->
+                                <div class="action-btn-row">
+                                    <button onclick="exportToImage()" class="abtn abtn-indigo"><i class="fa-solid fa-image"></i><span class="hidden md:inline">แคปเจอร์</span></button>
+                                    <button id="btn-exec-report" onclick="previewExecutiveReport()" class="abtn abtn-green"><i class="fa-solid fa-file-pdf"></i><span class="hidden md:inline">รายงาน</span></button>
+                                    <button onclick="toggleLEDMode()" class="abtn abtn-dark"><i class="fa-solid fa-tv"></i><span class="hidden md:inline">จอ LED</span></button>
+                                    <!-- Desktop only: ปุ่มออกเหตุ -->
+                                    <button onclick="goToDispatchMode()" class="hidden md:inline-flex abtn abtn-red" style="padding: 10px 16px; font-size: 0.88rem;">
+                                        <i class="fa-solid fa-siren-on"></i> โหมดออกเหตุ
+                                    </button>
+                                    <div class="ai-pill">
+                                        <span class="text-[10px] font-bold text-indigo-400 px-0.5 hidden md:inline">AI</span>
+                                        <button onclick="openAIReportModal()" class="abtn-ai-report"><i class="fa-solid fa-robot"></i><span class="hidden md:inline">สรุปรายงาน</span></button>
+                                        <button onclick="openAIRiskModal()" class="abtn-ai-risk"><i class="fa-solid fa-triangle-exclamation"></i><span class="hidden md:inline">จุดเสี่ยง</span></button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Export Area -->
+                    <div id="export-area" class="w-full relative pb-10" style="background: #f1f5f9;">
+
+                        <!-- Export Header (hidden, for print) -->
+                        <div id="export-header" class="hidden flex flex-col items-center justify-center mb-6 border-b-2 border-blue-900 pb-4">
+                            <img src="https://esvector.net/home_es/images/stories/logo/09-11/krokkaw.jpg" class="w-24 mb-2">
+                            <h1 class="text-3xl font-bold text-blue-900">รายงานสถานการณ์การแพทย์ฉุกเฉิน (ผ่านระบบ Kohkeaw Smart EMS)</h1>
+                            <h2 class="text-2xl font-bold text-gray-800">องค์การบริหารส่วนตำบลเกาะแก้ว</h2>
+                            <p class="text-lg text-red-600 font-bold mt-2" id="export-subtitle"></p>
+                        </div>
+
+                        <!-- Executive Summary -->
+                        <div id="executive-summary-box" class="hidden bg-white p-8 rounded-2xl shadow border-l-4 border-blue-800 mb-5 avoid-page-break">
+                            <h3 class="text-xl font-bold text-blue-900 mb-4 border-b pb-2"><i class="fa-solid fa-file-contract"></i> บทสรุปผู้บริหาร (Executive Summary)</h3>
+                            <p id="executive-summary-content" class="text-gray-800 leading-loose text-base text-justify"></p>
+                        </div>
+
+                        <!-- ===== STAT CARDS ===== -->
+                        <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4 mb-5">
+
+                            <!-- ผู้ป่วย -->
+                            <div class="scard sc-blue avoid-page-break">
+                                <div class="scard-icon si-blue"><i class="fa-solid fa-users"></i></div>
+                                <div class="text-xs text-slate-500 font-semibold mb-1">จำนวนผู้ป่วย</div>
+                                <div class="text-3xl font-black text-blue-600 leading-none mb-1"><span id="txt-total">0</span><span class="text-sm text-slate-400 font-normal ml-1">ราย</span></div>
+                                <div class="mt-2 bg-blue-50 rounded-lg py-1 px-2 border border-blue-100">
+                                    <p class="text-[11px] text-blue-700 font-bold">ออกปฏิบัติการ: <span id="txt-incidents">0</span> ครั้ง</p>
+                                </div>
+                            </div>
+
+                            <!-- เสียชีวิต -->
+                            <div class="scard sc-red avoid-page-break flex flex-col justify-center items-center text-center">
+                                <div class="scard-icon si-red"><i class="fa-solid fa-dove"></i></div>
+                                <div class="text-xs text-slate-500 font-semibold mb-1">เสียชีวิต</div>
+                                <div class="text-3xl font-black text-red-600 leading-none" id="txt-death">0</div>
+                                <div class="text-xs text-slate-400 mt-1">ราย</div>
+                            </div>
+
+                            <!-- Response Time -->
+                            <div class="scard sc-yellow avoid-page-break col-span-2 lg:col-span-2 relative">
+                                <div class="scard-icon si-yellow" style="position:absolute; top:14px; right:14px; margin:0; width:32px; height:32px;"><i class="fa-solid fa-stopwatch text-sm"></i></div>
+                                <div class="text-xs text-slate-500 font-semibold mb-2">⏱️ เวลาตอบสนอง (Response Time)</div>
+                                <div class="flex items-center justify-between w-full flex-1 gap-2">
+                                    <div class="relative w-1/2 h-24 flex flex-col items-center justify-center">
+                                        <div class="w-full h-full relative max-w-[140px]"><canvas id="chart-kpi-res"></canvas></div>
+                                        <div class="absolute bottom-0 flex flex-col items-center pointer-events-none">
+                                            <span class="text-2xl font-bold text-gray-700 leading-none"><span id="txt-kpi-res-pct">0</span>%</span>
+                                            <span class="text-[10px] text-gray-500 font-bold">ผ่านเกณฑ์ ≤ 8 นาที*</span>
+                                        </div>
+                                    </div>
+                                    <div class="w-1/2 flex flex-col justify-center gap-1 border-l border-gray-100 pl-3">
+                                        <div class="flex justify-between items-center mb-1 border-b pb-1">
+                                            <span class="text-[10px] text-gray-500 font-bold">เวลาเฉลี่ยรวม:</span>
+                                            <span class="text-sm font-bold text-yellow-600"><span id="txt-rt-avg">0.0</span> <span class="text-[9px]">นาที</span></span>
+                                        </div>
+                                        <div class="flex justify-between items-center"><span class="text-[9px] text-gray-400">เร็วที่สุด:</span><span class="text-[10px] font-bold text-green-600"><span id="txt-rt-min">0</span> นาที</span></div>
+                                        <div class="flex justify-between items-center mb-1"><span class="text-[9px] text-gray-400">ช้าที่สุด:</span><span class="text-[10px] font-bold text-red-500"><span id="txt-rt-max">0</span> นาที</span></div>
+                                        <div class="text-[9px] text-gray-500 font-bold mb-0.5 mt-1 border-t pt-1">ระยะทางเฉลี่ย:</div>
+                                        <div class="flex justify-between items-center bg-green-50 px-1 rounded"><span class="text-[9px] text-green-700">🟢 ผ่านเกณฑ์:</span><span class="text-[10px] font-bold text-green-700"><span id="txt-dist-pass">0.0</span> กม.</span></div>
+                                        <div class="flex justify-between items-center bg-red-50 px-1 rounded mt-0.5"><span class="text-[9px] text-red-700">🔴 ไม่ผ่านเกณฑ์:</span><span class="text-[10px] font-bold text-red-700"><span id="txt-dist-fail">0.0</span> กม.</span></div>
+                                    </div>
+                                </div>
+                                <div class="text-[9px] text-gray-400 text-right mt-1 font-medium">* เกณฑ์สถาบันการแพทย์ฉุกเฉินแห่งชาติ (สพฉ.)</div>
+                            </div>
+
+                            <!-- เพศ -->
+                            <div class="scard sc-neutral avoid-page-break flex flex-col justify-center items-center text-center">
+                                <div class="scard-icon si-neutral"><i class="fa-solid fa-venus-mars"></i></div>
+                                <div class="text-xs text-slate-500 font-semibold mb-2">เพศ</div>
+                                <div class="flex justify-around items-center w-full font-bold">
+                                    <div class="text-blue-500 flex flex-col items-center"><i class="fa-solid fa-person text-3xl mb-1"></i><span id="txt-male">0</span></div>
+                                    <div class="text-pink-500 flex flex-col items-center"><i class="fa-solid fa-person-dress text-3xl mb-1"></i><span id="txt-female">0</span></div>
+                                </div>
+                                <p class="text-[10px] text-gray-500 mt-2 font-bold" id="txt-gender-ratio">0.0% : 0.0%</p>
+                            </div>
+
+                            <!-- สัญชาติ -->
+                            <div class="scard sc-neutral avoid-page-break flex flex-col justify-center items-center text-center">
+                                <div class="scard-icon si-neutral"><i class="fa-solid fa-earth-asia"></i></div>
+                                <div class="text-xs text-slate-500 font-semibold mb-2">สัญชาติ</div>
+                                <div class="text-sm font-bold text-gray-700 mb-1">ไทย: <span id="txt-thai" class="text-green-600 text-base">0.0%</span></div>
+                                <div class="text-sm font-bold text-gray-700">ต่างชาติ: <span id="txt-foreigner" class="text-orange-500 text-base">0.0%</span></div>
+                            </div>
+                        </div>
+
+                        <!-- ===== CHART ROW 1 ===== -->
+                        <div class="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-5 items-start">
+                            <div class="ccard avoid-page-break lg:col-span-1">
+                                <div class="ccard-head"><div class="ccard-icon ci-orange"><i class="fa-solid fa-chart-pie"></i></div>ประเภทบริการ</div>
+                                <div class="relative w-full h-80"><canvas id="chart-service"></canvas></div>
+                            </div>
+                            <div class="ccard avoid-page-break lg:col-span-1">
+                                <div class="ccard-head"><div class="ccard-icon ci-red"><i class="fa-solid fa-trophy"></i></div>3 อันดับสาเหตุอุบัติเหตุ</div>
+                                <div id="top-causes-container" class="flex flex-col gap-2 h-80 overflow-y-auto px-1 justify-center"></div>
+                            </div>
+                            <div class="ccard avoid-page-break lg:col-span-2">
+                                <div class="ccard-head"><div class="ccard-icon ci-yellow"><i class="fa-solid fa-traffic-light"></i></div>ประเภทผู้ป่วย (ความรุนแรง)</div>
+                                <div class="relative w-full h-80"><canvas id="chart-severity"></canvas></div>
+                            </div>
+                        </div>
+
+                        <!-- ===== CHART ROW 2 ===== -->
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-5">
+                            <div class="ccard avoid-page-break">
+                                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
+                                    <div class="ccard-head" style="margin-bottom:0; padding-bottom:0; border-bottom:none;">
+                                        <div class="ccard-icon ci-purple"><i class="fa-solid fa-chart-bar"></i></div>
+                                        <span class="font-bold text-slate-800 flex items-center gap-2">
+                                            <i class="fa-solid fa-baby text-sky-400 animate-pulse text-xs"></i>
+                                            ช่วงอายุผู้รับบริการ (แยกเพศ)
+                                            <i class="fa-solid fa-person-cane text-pink-400 animate-pulse text-xs"></i>
+                                        </span>
+                                    </div>
+                                    <div class="relative flex w-full sm:w-60 bg-slate-200 rounded-full p-1 cursor-pointer shadow-inner border border-slate-300 flex-shrink-0" onclick="togglePyramidMode()">
+                                        <div id="pyramid-slider" class="absolute top-1 bottom-1 left-1 w-[calc(50%-4px)] bg-white rounded-full shadow-sm transition-all duration-300 z-0"></div>
+                                        <div id="text-risk" class="relative flex-1 text-center text-xs font-bold py-1.5 text-indigo-700 z-10">กลุ่มวัยเสี่ยง</div>
+                                        <div id="text-5yr" class="relative flex-1 text-center text-xs font-bold py-1.5 text-slate-500 z-10">ช่วงละ 5 ปี</div>
+                                        <input type="hidden" id="pyramid-mode" value="risk">
+                                    </div>
+                                </div>
+                                <div class="relative w-full h-64"><canvas id="chart-pyramid"></canvas></div>
+                            </div>
+                            <div class="ccard avoid-page-break">
+                                <div class="ccard-head"><div class="ccard-icon ci-blue"><i class="fa-solid fa-hospital"></i></div>สถานพยาบาลที่นำส่ง</div>
+                                <div class="relative w-full h-64"><canvas id="chart-hospital"></canvas></div>
+                            </div>
+                        </div>
+
+                        <!-- ===== CHART: ช่วงเวลา ===== -->
+                        <div class="ccard mb-5 avoid-page-break">
+                            <div class="ccard-head"><div class="ccard-icon ci-indigo"><i class="fa-solid fa-clock"></i></div>ช่วงเวลาเกิดเหตุ</div>
+                            <div class="relative w-full h-64 md:h-80"><canvas id="chart-time"></canvas></div>
+                        </div>
+
+                        <!-- ===== MAP ===== -->
+                        <div id="map-container-box" class="ccard mb-5 avoid-page-break">
+                            <div class="flex justify-between items-center mb-4">
+                                <div class="ccard-head" style="margin-bottom:0; padding-bottom:0; border-bottom:none;">
+                                    <div class="ccard-icon ci-green"><i class="fa-solid fa-map-location-dot"></i></div>
+                                    แผนที่แสดงจุดเกิดเหตุ
+                                </div>
+                                <select id="mapMode" onchange="updateMapDisplay()" class="border p-2 rounded-xl bg-blue-50 font-bold text-sm cursor-pointer border-blue-200 hover:bg-blue-100 outline-none">
+                                    <option value="all_same">📍 จุดพิกัด (รวม)</option>
+                                    <option value="severity">📍 แยกสีตามความรุนแรง</option>
+                                    <option value="service">📍 แยกสีตามประเภท</option>
+                                    <option value="accident_only">🚨 เฉพาะอุบัติเหตุ</option>
+                                    <option value="buffer">📍 ดูตามรัศมีระยะทาง</option>
+                                    <option value="heat_all">🔥 Heatmap (รวม)</option>
+                                    <option value="heat_accident">🔥 Heatmap (อุบัติเหตุ)</option>
+                                    <option value="timelapse">⏱️ Time-lapse รายชั่วโมง</option>
+                                </select>
+                            </div>
+                            <div id="map" class="h-[450px] w-full rounded-xl border z-0 mb-3 shadow-inner"></div>
+                            <div id="map-legend" class="text-sm text-center text-gray-700 font-bold flex flex-wrap justify-center gap-4 bg-gray-50 p-2 rounded-xl border"></div>
+                        </div>
+
+                        <!-- Time-lapse Controller -->
+                        <div id="timelapse-bar" class="hidden mb-5 bg-white rounded-2xl shadow border border-gray-200 p-4">
+                            <div class="flex items-center justify-between mb-2">
+                                <div class="flex items-center gap-2">
+                                    <i class="fa-solid fa-film text-indigo-600"></i>
+                                    <span class="font-bold text-indigo-800 text-sm">Time-lapse</span>
+                                    <span class="text-xs text-white font-bold px-2 py-0.5 rounded-full" id="timelapse-label" style="background:#4f46e5;">00:00 น.</span>
+                                </div>
+                                <div class="flex items-center gap-1.5">
+                                    <button onclick="toggleTimelapse()" id="timelapse-play-btn" class="bg-indigo-600 text-white w-8 h-8 rounded-full flex items-center justify-center hover:bg-indigo-700 transition text-xs"><i class="fa-solid fa-play" id="timelapse-play-icon"></i></button>
+                                    <button onclick="stopTimelapse()" class="bg-gray-200 text-gray-700 w-8 h-8 rounded-full flex items-center justify-center hover:bg-gray-300 transition text-xs"><i class="fa-solid fa-stop"></i></button>
+                                </div>
+                            </div>
+                            <input type="range" id="timelapse-slider" min="0" max="23" value="0" class="w-full accent-indigo-600 cursor-pointer" oninput="onTimelapseSlider(this.value)">
+                            <div class="flex justify-between text-[10px] text-gray-400 mt-1">
+                                <span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span><span>23:00</span>
+                            </div>
+                        </div>
+
+                        <!-- ===== CHART: สถิติรายวัน/เดือน ===== -->
+                        <div class="ccard mb-4 avoid-page-break flex flex-col">
+                            <div class="flex justify-between items-center mb-3 border-b pb-2 border-gray-100">
+                                <div class="ccard-head" style="margin-bottom:0; padding-bottom:0; border-bottom:none;">
+                                    <div class="ccard-icon ci-indigo"><i class="fa-solid fa-chart-line"></i></div>
+                                    <span class="font-bold text-indigo-800" id="monthly-chart-title">สถิติเปรียบเทียบ</span>
+                                </div>
+                                <button onclick="toggleVsMode()" class="bg-indigo-100 text-indigo-700 hover:bg-indigo-200 px-3 py-1.5 rounded-full text-xs md:text-sm font-bold transition shadow-sm border border-indigo-200" id="btn-vs-toggle">
+                                    <i class="fa-solid fa-code-compare"></i> โหมดเปรียบเทียบ (VS)
+                                </button>
+                            </div>
+                            <div id="vs-controls" class="hidden bg-indigo-50 p-3 rounded-xl border border-indigo-100 mb-3 flex flex-wrap gap-4 items-end shadow-inner">
+                                <div>
+                                    <label class="block text-[11px] font-bold text-indigo-800 mb-1">ประเภทการเทียบ</label>
+                                    <select id="vs-type" onchange="changeVsType()" class="border border-indigo-200 p-2 rounded-lg bg-white text-xs font-bold outline-none cursor-pointer">
+                                        <option value="mom">เดือน VS เดือน (MoM)</option>
+                                        <option value="yoy">ปี VS ปี (YoY)</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-[11px] font-bold text-indigo-800 mb-1">ข้อมูลที่ต้องการดู</label>
+                                    <select id="vs-metric" onchange="processVsData()" class="border border-indigo-200 p-2 rounded-lg bg-white text-xs font-bold outline-none cursor-pointer">
+                                        <option value="total">รวมทุกเคส</option>
+                                        <option value="accident">เฉพาะอุบัติเหตุ</option>
+                                        <option value="sick">เฉพาะเจ็บป่วย</option>
+                                        <option value="death">เสียชีวิต</option>
+                                    </select>
+                                </div>
+                                <div id="vs-mom-inputs" class="flex gap-2 items-center bg-white p-1.5 rounded-lg border border-gray-200">
+                                    <div><label class="block text-[10px] font-bold text-blue-700 mb-1 text-center">เดือนที่ 1</label><input type="month" id="vs-m1" onchange="processVsData()" class="border border-blue-300 p-1 rounded text-xs font-bold text-blue-700 bg-blue-50 outline-none"></div>
+                                    <div class="text-xs font-extrabold text-gray-400">VS</div>
+                                    <div><label class="block text-[10px] font-bold text-red-600 mb-1 text-center">เดือนที่ 2</label><input type="month" id="vs-m2" onchange="processVsData()" class="border border-red-300 p-1 rounded text-xs font-bold text-red-600 bg-red-50 outline-none"></div>
+                                </div>
+                                <div id="vs-yoy-inputs" class="hidden gap-2 items-center bg-white p-1.5 rounded-lg border border-gray-200">
+                                    <div><label class="block text-[10px] font-bold text-blue-700 mb-1 text-center">ปีที่ 1 (พ.ศ.)</label><input type="number" id="vs-y1" onchange="processVsData()" class="border border-blue-300 p-1.5 rounded text-xs font-bold text-blue-700 bg-blue-50 outline-none w-24 text-center" min="2560" max="2600" placeholder="เช่น 2569"></div>
+                                    <div class="text-xs font-extrabold text-gray-400">VS</div>
+                                    <div><label class="block text-[10px] font-bold text-red-600 mb-1 text-center">ปีที่ 2 (พ.ศ.)</label><input type="number" id="vs-y2" onchange="processVsData()" class="border border-red-300 p-1.5 rounded text-xs font-bold text-red-600 bg-red-50 outline-none w-24 text-center" min="2560" max="2600" placeholder="เช่น 2568"></div>
+                                </div>
+                            </div>
+                            <div id="vs-insight" class="hidden bg-gradient-to-r from-emerald-50 to-white border-l-4 border-emerald-500 p-3 mb-3 rounded-xl shadow-sm text-sm text-gray-800 font-medium"></div>
+                            <div class="relative w-full flex-1 min-h-[18rem]"><canvas id="chart-monthly"></canvas></div>
+                        </div>
+
+                        <!-- Export Footer -->
+                        <div id="export-footer" class="hidden mt-12 mb-8 w-full avoid-page-break">
+                            <div class="flex justify-around text-center text-gray-800 font-bold">
+                                <div><br><br><br><p>(ลงชื่อ) ....................................................... ผู้รายงาน</p><p class="mt-2">( ....................................................... )</p><p class="mt-1 font-normal text-sm text-gray-600">เจ้าหน้าที่ปฏิบัติการแพทย์ฉุกเฉิน</p></div>
+                                <div><br><br><br><p>(ลงชื่อ) ....................................................... ผู้ตรวจสอบ</p><p class="mt-2">( นายสมรักษ์ สารภี )</p><p class="mt-1 font-normal text-sm text-gray-600">นักวิชาการสาธารณสุขชำนาญการ</p></div>
+                            </div>
+                        </div>
+
+                    </div><!-- /export-area -->
+                </div><!-- /view-dashboard -->
+
+                <!-- ===== TEAM VIEW ===== -->
+                <div id="view-team" class="hidden w-full max-w-6xl mx-auto py-2 pb-16">
+                    <div class="bg-gradient-to-r from-blue-900 to-blue-700 text-white p-5 md:p-8 rounded-2xl shadow-xl mb-8 relative overflow-hidden flex items-center justify-between">
+                        <i class="fa-solid fa-users text-6xl md:text-8xl opacity-10 absolute left-1/2 transform -translate-x-1/2 -rotate-12 pointer-events-none z-0"></i>
+                        <div class="w-14 h-14 md:w-24 md:h-24 bg-white p-1 rounded-full shadow-lg border-2 border-blue-400 flex-shrink-0 z-10"><img src="https://esvector.net/home_es/images/stories/logo/09-11/krokkaw.jpg" class="w-full h-full object-contain rounded-full"></div>
+                        <div class="text-center flex-1 px-2 z-10"><h1 class="text-lg sm:text-2xl md:text-3xl lg:text-4xl font-extrabold mb-1 drop-shadow-md">ทำเนียบเจ้าหน้าที่</h1><h2 class="text-[10px] sm:text-sm md:text-base text-blue-200">ศูนย์ปฏิบัติการ Kohkeaw Smart EMS</h2></div>
+                        <div class="w-14 h-14 md:w-24 md:h-24 bg-white p-1 rounded-full shadow-lg border-2 border-red-400 flex-shrink-0 z-10"><img src="https://i.postimg.cc/QtJQxPnS/Asset-1.png" class="w-full h-full object-contain rounded-full"></div>
+                    </div>
+                    <div id="team-container" class="flex flex-col items-center w-full relative z-20"></div>
+                </div>
+
+                <!-- ===== FORM VIEW ===== -->
+                <div id="view-form" class="hidden max-w-4xl mx-auto bg-white p-6 md:p-8 rounded-2xl shadow mb-10">
+                    <h2 class="text-xl md:text-2xl font-bold mb-6 border-b pb-3 text-blue-900"><i class="fa-solid fa-file-medical"></i> บันทึกข้อมูลเคสใหม่</h2>
+                    <form id="emsForm" onsubmit="event.preventDefault(); submitNewCase('dashboard');">
+                        <div class="bg-blue-50 p-4 rounded-xl border border-blue-100 mb-6">
+                            <h3 class="font-bold text-blue-800 mb-3 border-b border-blue-200 pb-1"><i class="fa-solid fa-truck-fast"></i> 1. ข้อมูลปฏิบัติการ</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                                <div><label class="block text-sm font-bold mb-1">เลขปฏิบัติการ</label><input type="text" id="f-opNum" class="w-full border p-2 rounded-lg" placeholder="เช่น EMS-69001"></div>
+                                <div><label class="block text-sm font-bold mb-1">รถปฏิบัติการคันที่</label><input type="text" id="f-vanNum" class="w-full border p-2 rounded-lg" placeholder="เช่น 1 หรือ กก.1234"></div>
+                                <div><label class="block text-sm font-bold mb-1">รับแจ้งจาก</label><input type="text" id="f-notifyBy" class="w-full border p-2 rounded-lg" placeholder="เช่น ศูนย์นเรนทร"></div>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                <div><label class="block text-sm font-bold mb-1">วันที่เกิดเหตุ <span class="text-red-500">*</span></label><input type="date" id="f-date" class="w-full border p-2 rounded-lg" required></div>
+                                <div><label class="block text-sm font-bold mb-1">เวลา (รับแจ้ง) <span class="text-red-500">*</span></label><input type="text" id="f-timeNotified" class="w-full border p-2 rounded-lg" placeholder="14:30" maxlength="5" oninput="formatTimeInput(event)" required></div>
+                                <div><label class="block text-sm font-bold mb-1">เวลา (ถึงที่เกิดเหตุ) <span class="text-red-500">*</span></label><input type="text" id="f-timeArrived" class="w-full border p-2 rounded-lg" placeholder="14:45" maxlength="5" oninput="formatTimeInput(event)" required></div>
+                                <div><label class="block text-sm font-bold mb-1 text-red-600">สถานะค้นพบ <span class="text-red-500">*</span></label><select id="f-foundStatus" onchange="toggleFalseAlarmMode('f')" class="w-full border-2 border-red-300 p-2 rounded-lg bg-white font-bold text-red-700 cursor-pointer"><option value="พบเหตุ">✅ พบเหตุ (บันทึกปกติ)</option><option value="ไม่พบเหตุ">❌ ไม่พบเหตุ / ยกเลิก</option></select></div>
+                            </div>
+                        </div>
+                        <div id="f-section-patient-details">
+                            <div class="bg-emerald-50 p-4 rounded-xl border border-emerald-100 mb-6">
+                                <h3 class="font-bold text-emerald-800 mb-3 border-b border-emerald-200 pb-1"><i class="fa-solid fa-user-injured"></i> 2. ข้อมูลผู้ป่วย</h3>
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                                    <div class="md:col-span-2"><label class="block text-sm font-bold mb-1">ชื่อ-สกุล</label><input type="text" id="f-patientName" class="w-full border p-2 rounded-lg" placeholder="ระบุชื่อ (ถ้าทราบ)"></div>
+                                    <div><label class="block text-sm font-bold mb-1">HN (ถ้ามี)</label><input type="text" id="f-hn" class="w-full border p-2 rounded-lg" placeholder="รหัส รพ."></div>
+                                </div>
+                                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                    <div><label class="block text-sm font-bold mb-1">อายุ (ปี)</label><input type="number" id="f-age" class="w-full border p-2 rounded-lg"></div>
+                                    <div><label class="block text-sm font-bold mb-1">เพศ <span class="text-red-500 f-required-star">*</span></label><select id="f-gender" class="w-full border p-2 rounded-lg f-form-req" required><option value="">-เลือก-</option><option value="ชาย">ชาย</option><option value="หญิง">หญิง</option></select></div>
+                                    <div><label class="block text-sm font-bold mb-1">สัญชาติ <span class="text-red-500 f-required-star">*</span></label><select id="f-nationality" class="w-full border p-2 rounded-lg f-form-req" required><option value="">-เลือก-</option><option value="ไทย">ไทย</option><option value="ต่างชาติ">ต่างชาติ</option></select></div>
+                                    <div><label class="block text-sm font-bold mb-1">เบอร์โทรศัพท์</label><input type="text" id="f-phone" class="w-full border p-2 rounded-lg"></div>
+                                </div>
+                            </div>
+                            <div class="bg-orange-50 p-4 rounded-xl border border-orange-100 mb-6">
+                                <h3 class="font-bold text-orange-800 mb-3 border-b border-orange-200 pb-1"><i class="fa-solid fa-truck-medical"></i> 3. เหตุการณ์ และสถานที่</h3>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                    <div><label class="block text-sm font-bold mb-1">ประเภทบริการ <span class="text-red-500 f-required-star">*</span></label><select id="f-serviceType" class="w-full border p-2 rounded-lg f-form-req" onchange="handleServiceTypeChange('f')" required><option value="">-เลือก-</option><option value="อุบัติเหตุ">อุบัติเหตุ</option><option value="เจ็บป่วย">เจ็บป่วยฉุกเฉิน</option><option value="บริการอื่นๆ">บริการอื่นๆ</option></select></div>
+                                    <div id="f-subServiceType-container" class="hidden"><label class="block text-sm font-bold mb-1 text-red-600">ประเภทย่อย <span class="text-red-500 f-required-star">*</span></label><select id="f-subServiceType" class="w-full border p-2 rounded-lg bg-red-50 f-form-req" onchange="handleSubServiceTypeChange('f')"><option value="">-เลือก-</option><option value="อุบัติเหตุจราจร">อุบัติเหตุจราจร</option><option value="อุบัติเหตุทั่วไป">อุบัติเหตุทั่วไป</option><option value="อุบัติเหตุทางน้ำ">อุบัติเหตุทางน้ำ</option><option value="อื่นๆ">อื่นๆ</option></select></div>
+                                </div>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                    <div><label class="block text-sm font-bold mb-1">อาการเบื้องต้น <span class="text-red-500 f-required-star">*</span></label><input type="text" id="f-cause-text" class="w-full border p-2 rounded-lg f-form-req" placeholder="เช่น ปวดขาซ้าย แผลถลอก" required></div>
+                                    <div id="f-traffic-moi-container" class="hidden"><label class="block text-sm font-bold mb-1 text-red-600">สาเหตุ (จราจร) <span class="text-red-500 f-required-star">*</span></label><select id="f-traffic-moi" class="w-full border p-2 rounded-lg bg-red-50 f-form-req"><option value="">-เลือกสาเหตุจราจร-</option><option value="MC ล้มเอง (จักรยานยนต์เสียหลัก/ล้มเอง)">MC ล้มเอง</option><option value="MC + Car (จักรยานยนต์ ชน รถยนต์/รถกระบะ)">MC + Car</option><option value="MC + MC (จักรยานยนต์ ชน จักรยานยนต์)">MC + MC</option><option value="MC + Pedestrian (จักรยานยนต์ ชน คนเดินเท้า)">MC + Pedestrian</option><option value="Car + Car (รถยนต์ ชน รถยนต์)">Car + Car</option><option value="Car + Pedestrian (รถยนต์ ชน คนเดินเท้า)">Car + Pedestrian</option><option value="Car ล้มเอง (รถยนต์เสียหลัก/ชนต้นไม้/ตกข้างทาง)">Car ล้มเอง</option><option value="3-Wheeler / Saleng (อุบัติเหตุเกี่ยวกับรถสามล้อ/ซาเล้ง)">3-Wheeler / Saleng</option><option value="Bicycle (อุบัติเหตุจักรยาน)">Bicycle</option><option value="Truck / Bus (รถบรรทุก / รถโดยสารขนาดใหญ่)">Truck / Bus</option><option value="อื่นๆ (ระบุในรายละเอียดเพิ่มเติม)">อื่นๆ</option></select></div>
+                                </div>
+                                <div class="mb-4"><label class="block text-sm font-bold mb-1">รายละเอียดเพิ่มเติม</label><textarea id="f-details" class="w-full border p-2 rounded-lg" rows="2"></textarea></div>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                    <div><label class="block text-sm font-bold mb-1">ความรุนแรง <span class="text-red-500 f-required-star">*</span></label><select id="f-severity" class="w-full border p-2 rounded-lg f-form-req" required><option value="">-เลือก-</option><option value="วิกฤต (แดง)">วิกฤต (แดง)</option><option value="เร่งด่วน (เหลือง)">เร่งด่วน (เหลือง)</option><option value="ไม่รุนแรง (เขียว)">ไม่รุนแรง (เขียว)</option><option value="ทั่วไป (ขาว)">ทั่วไป (ขาว)</option><option value="บริการสาธารณสุขอื่น (ดำ)">บริการสาธารณสุขอื่น (ดำ)</option></select></div>
+                                    <div><label class="block text-sm font-bold mb-1">การดำเนินการ / ผลลัพธ์ <span class="text-red-500 f-required-star">*</span></label><select id="f-status" class="w-full border p-2 rounded-lg f-form-req" required><option value="รอดชีวิต">นำส่ง รพ. / ปฐมพยาบาล</option><option value="เสียชีวิต">เสียชีวิต</option></select></div>
+                                </div>
+                                <div class="mb-4">
+                                    <label class="block text-sm font-bold mb-1">สถานพยาบาล <span class="text-red-500 f-required-star">*</span></label>
+                                    <select id="f-hospital" class="w-full border p-2 rounded-lg f-form-req" required>
+                                        <option value="">-เลือกสถานพยาบาล-</option>
+                                        <optgroup label="โรงพยาบาลรัฐบาล"><option value="รพ.วชิระภูเก็ต">รพ.วชิระภูเก็ต</option><option value="รพ.ถลาง">รพ.ถลาง</option><option value="รพ.ป่าตอง">รพ.ป่าตอง</option><option value="รพ.ฉลอง">รพ.ฉลอง</option><option value="รพ.อบจ.ภูเก็ต">รพ.อบจ.ภูเก็ต</option></optgroup>
+                                        <optgroup label="โรงพยาบาลเอกชน"><option value="รพ.กรุงเทพภูเก็ต">รพ.กรุงเทพภูเก็ต</option><option value="รพ.กรุงเทพสิริโรจน์">รพ.กรุงเทพสิริโรจน์</option><option value="รพ.มิชชั่นภูเก็ต">รพ.มิชชั่นภูเก็ต</option><option value="รพ.ดีบุก">รพ.ดีบุก</option></optgroup>
+                                        <optgroup label="อื่นๆ"><option value="รพ.สต.เกาะแก้ว">รพ.สต.เกาะแก้ว</option><option value="ปฐมพยาบาล ณ จุดเกิดเหตุ (ไม่ไป รพ.)">ปฐมพยาบาล ณ จุดเกิดเหตุ</option><option value="อื่นๆ (ระบุในหมายเหตุ)">อื่นๆ</option></optgroup>
+                                    </select>
+                                </div>
+                                <div class="mb-4" id="f-section-map">
+                                    <label class="block text-sm font-bold mb-1">สถานที่เกิดเหตุ (จุดสังเกต)</label>
+                                    <input type="text" id="f-locationName" class="w-full border p-2 rounded-lg mb-2">
+                                    <label class="block text-sm font-bold mb-1 mt-3">ค้นหาและปักหมุดพิกัดแผนที่ <span class="text-red-500 f-required-star">*</span></label>
+                                    <div class="flex gap-2 mb-3">
+                                        <input type="text" id="f-searchInput" class="w-full border border-blue-300 p-2 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500" placeholder="🔍 พิมพ์ชื่อสถานที่..." onkeypress="if(event.key==='Enter'){event.preventDefault(); searchLocation('f');}">
+                                        <button type="button" onclick="searchLocation('f')" class="bg-blue-600 text-white px-4 rounded-lg font-bold hover:bg-blue-700 shadow text-sm whitespace-nowrap"><i class="fa-solid fa-search"></i> ค้นหา</button>
+                                    </div>
+                                    <div class="flex gap-2 mb-2">
+                                        <input type="text" id="f-lat" class="w-full border p-2 rounded-lg bg-white text-sm f-form-req" placeholder="Latitude" oninput="updateMapFromInput()" required>
+                                        <input type="text" id="f-lng" class="w-full border p-2 rounded-lg bg-white text-sm f-form-req" placeholder="Longitude" oninput="updateMapFromInput()" required>
+                                        <button type="button" onclick="getLocation()" class="bg-orange-600 text-white px-4 rounded-lg font-bold whitespace-nowrap shadow hover:bg-orange-700 text-sm"><i class="fa-solid fa-location-crosshairs"></i> GPS</button>
+                                    </div>
+                                    <div class="text-[10px] text-gray-500 mb-2 italic">** หรือจิ้มบนแผนที่ด้านล่างเพื่อปักหมุดด้วยตัวเองก็ได้ครับ</div>
+                                    <div id="formMap" class="h-[400px] w-full rounded-xl border-2 border-blue-200 shadow-inner z-0"></div>
+                                </div>
+                                <div><label class="block text-sm font-bold mb-1">หมายเหตุ</label><input type="text" id="f-note" class="w-full border p-2 rounded-lg"></div>
+                            </div>
+                        </div>
+                        <div class="flex flex-col sm:flex-row gap-3 mt-4" id="f-btn-container">
+                            <button type="submit" class="flex-1 bg-green-600 text-white font-bold py-4 rounded-xl shadow-lg text-lg"><i class="fa-solid fa-save mr-2"></i> บันทึก & คัดลอกลงไลน์</button>
+                            <button type="button" id="f-btn-add-another" onclick="submitNewCase('add_another')" class="flex-1 bg-blue-600 text-white font-bold py-4 rounded-xl shadow-lg text-lg"><i class="fa-solid fa-user-plus mr-2"></i> บันทึก & เพิ่มผู้ป่วยอีกราย</button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- ===== MANAGE VIEW ===== -->
+                <div id="view-manage" class="hidden bg-white p-4 md:p-6 rounded-2xl shadow mb-10 w-full relative z-10">
+                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center border-b pb-3 mb-4 gap-3">
+                        <h2 class="text-xl font-bold text-blue-900"><i class="fa-solid fa-list"></i> จัดการข้อมูลเคส</h2>
+                        <div class="flex flex-wrap gap-2 w-full md:w-auto items-center">
+                            <div class="flex items-center bg-blue-50 border border-blue-200 rounded-lg px-2 py-1 gap-2">
+                                <select id="manage-filter-mode" onchange="toggleManageFilterMode()" class="bg-transparent text-sm font-bold text-blue-800 outline-none cursor-pointer border-r border-blue-200 pr-2">
+                                    <option value="daily">รายวัน</option>
+                                    <option value="monthly">รายเดือน</option>
+                                </select>
+                                <input type="date" id="manage-date-picker" class="border-none bg-transparent text-sm font-bold text-gray-700 outline-none cursor-pointer" onchange="applyManageFilters()">
+                                <input type="month" id="manage-month-picker" class="hidden border-none bg-transparent text-sm font-bold text-gray-700 outline-none cursor-pointer" onchange="applyManageFilters()">
+                            </div>
+                            <button onclick="clearManageFilters()" class="bg-gray-200 text-gray-700 px-3 py-1.5 rounded-lg font-bold hover:bg-gray-300 transition text-sm"><i class="fa-solid fa-border-all"></i> ดูทั้งหมด</button>
+                            <button onclick="downloadSecureData()" class="bg-green-600 text-white px-3 py-1.5 rounded-lg font-bold shadow hover:bg-green-700 transition text-sm"><i class="fa-solid fa-file-excel"></i> ส่งออก</button>
+                            <button onclick="openReportMenu()" class="bg-indigo-600 text-white px-3 py-1.5 rounded-lg font-bold shadow hover:bg-indigo-700 transition text-sm"><i class="fa-solid fa-print"></i> พิมพ์รายงาน</button>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto w-full">
+                        <table class="w-full text-left border-collapse whitespace-nowrap text-sm">
+                            <thead>
+                                <tr class="bg-blue-100 border-b-2 border-blue-500">
+                                    <th class="p-2">วันที่</th><th class="p-2">รับแจ้ง</th><th class="p-2">ชื่อ-สกุล</th>
+                                    <th class="p-2">ประเภท</th><th class="p-2">อาการ(สาเหตุ)</th><th class="p-2">ความรุนแรง</th>
+                                    <th class="p-2">ผู้บันทึก</th><th class="p-2">ทีมปฏิบัติการ</th><th class="p-2 text-center">จัดการ</th>
+                                </tr>
+                                <tr class="bg-blue-50 border-b">
+                                    <th class="p-1"><div class="text-xs text-center text-gray-400">ใช้ตัวกรองด้านบน</div></th>
+                                    <th class="p-1"><input type="text" id="filter-time" placeholder="ค้นเวลา" class="w-full border p-1 text-xs rounded" oninput="applyManageFilters()"></th>
+                                    <th class="p-1"><input type="text" id="filter-name" placeholder="ค้นชื่อ" class="w-full border p-1 text-xs rounded" oninput="applyManageFilters()"></th>
+                                    <th class="p-1"><select id="filter-type" class="w-full border p-1 text-xs rounded" onchange="applyManageFilters()"><option value="">ทั้งหมด</option><option value="อุบัติเหตุ">อุบัติเหตุ</option><option value="เจ็บป่วย">เจ็บป่วย</option><option value="บริการอื่นๆ">บริการอื่นๆ</option></select></th>
+                                    <th class="p-1"><input type="text" id="filter-cause" placeholder="ค้นอาการ" class="w-full border p-1 text-xs rounded" oninput="applyManageFilters()"></th>
+                                    <th class="p-1"><select id="filter-severity" class="w-full border p-1 text-xs rounded" onchange="applyManageFilters()"><option value="">ทั้งหมด</option><option value="แดง">วิกฤต</option><option value="เหลือง">เร่งด่วน</option><option value="เขียว">ไม่รุนแรง</option><option value="ขาว">ทั่วไป</option><option value="ดำ">เสียชีวิต</option></select></th>
+                                    <th class="p-1 text-center text-xs text-gray-500 font-normal" colspan="3">พิมพ์เพื่อกรองเพิ่ม</th>
+                                </tr>
+                            </thead>
+                            <tbody id="manage-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div><!-- /scroll-area -->
+
+            <!-- Footer -->
+            <footer id="global-footer" class="absolute bottom-0 w-full bg-white border-t border-gray-200 py-2.5 px-4 z-20 text-center avoid-page-break" style="box-shadow: 0 -2px 10px rgba(0,0,0,0.04);">
+                <p class="text-xs text-gray-500 font-medium"><i class="fa-solid fa-hospital text-blue-600 mr-1"></i> ดำเนินงานโดย กองสาธารณสุขและสิ่งแวดล้อม องค์การบริหารส่วนตำบลเกาะแก้ว อำเภอเมือง จังหวัดภูเก็ต</p>
+                <p class="text-[10px] text-gray-400 mt-0.5">© 2026 Kohkeaw Smart EMS. All rights reserved.</p>
+            </footer>
+
+        </main>
+    </div><!-- /app-page -->
+
+    <!-- ===== EDIT MODAL ===== -->
+    <div id="editModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-[70] flex items-center justify-center p-2">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[95vh] overflow-y-auto p-4 md:p-6">
+            <div class="flex justify-between items-center border-b pb-3 mb-4">
+                <h3 class="text-lg font-bold text-blue-900"><i class="fa-solid fa-pen-to-square"></i> แก้ไขข้อมูลเคส</h3>
+                <button onclick="closeEditModal()" class="text-red-500 text-2xl"><i class="fa-solid fa-times"></i></button>
+            </div>
+            <form id="editForm" onsubmit="event.preventDefault(); saveEditCase();">
+                <input type="hidden" id="e-row">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
+                    <div><label class="text-xs font-bold">เลขปฏิบัติการ</label><input type="text" id="e-opNum" class="w-full border p-2 rounded-lg"></div>
+                    <div><label class="text-xs font-bold">รถคันที่</label><input type="text" id="e-vanNum" class="w-full border p-2 rounded-lg"></div>
+                    <div><label class="text-xs font-bold">รับแจ้งจาก</label><input type="text" id="e-notifyBy" class="w-full border p-2 rounded-lg"></div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
+                    <div><label class="text-xs font-bold">วันที่เกิดเหตุ</label><input type="date" id="e-date" class="w-full border p-2 rounded-lg" required></div>
+                    <div><label class="text-xs font-bold">เวลารับแจ้ง</label><input type="text" id="e-timeNotified" class="w-full border p-2 rounded-lg" required></div>
+                    <div><label class="text-xs font-bold">เวลาถึง</label><input type="text" id="e-timeArrived" class="w-full border p-2 rounded-lg" required></div>
+                </div>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3 bg-emerald-50 p-2 rounded-lg">
+                    <div class="col-span-2"><label class="text-xs font-bold">ชื่อ-สกุล</label><input type="text" id="e-patientName" class="w-full border p-2 rounded-lg"></div>
+                    <div><label class="text-xs font-bold">HN</label><input type="text" id="e-hn" class="w-full border p-2 rounded-lg"></div>
+                    <div><label class="text-xs font-bold">อายุ</label><input type="number" id="e-age" class="w-full border p-2 rounded-lg"></div>
+                    <div><label class="text-xs font-bold">เพศ</label><select id="e-gender" class="w-full border p-2 rounded-lg"><option value="ชาย">ชาย</option><option value="หญิง">หญิง</option></select></div>
+                    <div><label class="text-xs font-bold">สัญชาติ</label><select id="e-nationality" class="w-full border p-2 rounded-lg"><option value="ไทย">ไทย</option><option value="ต่างชาติ">ต่างชาติ</option></select></div>
+                    <div class="col-span-2"><label class="text-xs font-bold">เบอร์โทร</label><input type="text" id="e-phone" class="w-full border p-2 rounded-lg"></div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+                    <div><label class="text-xs font-bold">ประเภทบริการ</label><select id="e-serviceType" class="w-full border p-2 rounded-lg" onchange="handleServiceTypeChange('e')" required><option value="อุบัติเหตุ">อุบัติเหตุ</option><option value="เจ็บป่วย">เจ็บป่วยฉุกเฉิน</option><option value="บริการอื่นๆ">บริการอื่นๆ</option></select></div>
+                    <div id="e-subServiceType-container" class="hidden"><label class="text-xs font-bold text-red-600">ประเภทย่อย</label><select id="e-subServiceType" class="w-full border p-2 rounded-lg bg-red-50" onchange="handleSubServiceTypeChange('e')"><option value="">-เลือก-</option><option value="อุบัติเหตุจราจร">อุบัติเหตุจราจร</option><option value="อุบัติเหตุทั่วไป">อุบัติเหตุทั่วไป</option><option value="อุบัติเหตุทางน้ำ">อุบัติเหตุทางน้ำ</option><option value="อื่นๆ">อื่นๆ</option></select></div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+                    <div><label class="text-xs font-bold">อาการเบื้องต้น</label><input type="text" id="e-cause-text" class="w-full border p-2 rounded-lg" required></div>
+                    <div id="e-traffic-moi-container" class="hidden"><label class="text-xs font-bold text-red-600">สาเหตุ (จราจร)</label><select id="e-traffic-moi" class="w-full border p-2 rounded-lg bg-red-50"><option value="">-เลือก-</option><option value="MC ล้มเอง (จักรยานยนต์เสียหลัก/ล้มเอง)">MC ล้มเอง</option><option value="MC + Car (จักรยานยนต์ ชน รถยนต์/รถกระบะ)">MC + Car</option><option value="MC + MC (จักรยานยนต์ ชน จักรยานยนต์)">MC + MC</option><option value="MC + Pedestrian (จักรยานยนต์ ชน คนเดินเท้า)">MC + Pedestrian</option><option value="Car + Car (รถยนต์ ชน รถยนต์)">Car + Car</option><option value="Car + Pedestrian (รถยนต์ ชน คนเดินเท้า)">Car + Pedestrian</option><option value="Car ล้มเอง (รถยนต์เสียหลัก/ชนต้นไม้/ตกข้างทาง)">Car ล้มเอง</option><option value="3-Wheeler / Saleng (อุบัติเหตุเกี่ยวกับรถสามล้อ/ซาเล้ง)">3-Wheeler</option><option value="Bicycle (อุบัติเหตุจักรยาน)">Bicycle</option><option value="Truck / Bus (รถบรรทุก / รถโดยสารขนาดใหญ่)">Truck / Bus</option><option value="อื่นๆ (ระบุในรายละเอียดเพิ่มเติม)">อื่นๆ</option></select></div>
+                </div>
+                <div class="mb-3"><label class="text-xs font-bold">รายละเอียด</label><input type="text" id="e-details" class="w-full border p-2 rounded-lg"></div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
+                    <div><label class="text-xs font-bold">ความรุนแรง</label><select id="e-severity" class="w-full border p-2 rounded-lg" required><option value="วิกฤต (แดง)">วิกฤต (แดง)</option><option value="เร่งด่วน (เหลือง)">เร่งด่วน (เหลือง)</option><option value="ไม่รุนแรง (เขียว)">ไม่รุนแรง (เขียว)</option><option value="ทั่วไป (ขาว)">ทั่วไป (ขาว)</option><option value="บริการสาธารณสุขอื่น (ดำ)">บริการสาธารณสุขอื่น (ดำ)</option></select></div>
+                    <div><label class="text-xs font-bold">ผลลัพธ์</label><select id="e-status" class="w-full border p-2 rounded-lg" required><option value="รอดชีวิต">รอดชีวิต</option><option value="เสียชีวิต">เสียชีวิต</option></select></div>
+                    <div><label class="text-xs font-bold">โรงพยาบาล</label>
+                        <select id="e-hospital" class="w-full border p-2 rounded-lg" required>
+                            <option value="">-เลือก-</option>
+                            <optgroup label="รัฐบาล"><option value="รพ.วชิระภูเก็ต">รพ.วชิระภูเก็ต</option><option value="รพ.ถลาง">รพ.ถลาง</option><option value="รพ.ป่าตอง">รพ.ป่าตอง</option><option value="รพ.ฉลอง">รพ.ฉลอง</option><option value="รพ.อบจ.ภูเก็ต">รพ.อบจ.ภูเก็ต</option></optgroup>
+                            <optgroup label="เอกชน"><option value="รพ.กรุงเทพภูเก็ต">รพ.กรุงเทพภูเก็ต</option><option value="รพ.กรุงเทพสิริโรจน์">รพ.กรุงเทพสิริโรจน์</option><option value="รพ.มิชชั่นภูเก็ต">รพ.มิชชั่นภูเก็ต</option><option value="รพ.ดีบุก">รพ.ดีบุก</option></optgroup>
+                            <optgroup label="อื่นๆ"><option value="รพ.สต.เกาะแก้ว">รพ.สต.เกาะแก้ว</option><option value="ปฐมพยาบาล ณ จุดเกิดเหตุ (ไม่ไป รพ.)">ปฐมพยาบาล ณ จุดเกิดเหตุ</option><option value="อื่นๆ (ระบุในหมายเหตุ)">อื่นๆ</option></optgroup>
+                        </select>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4 bg-gray-50 p-2 rounded-xl border" id="e-section-map">
+                    <div class="col-span-3"><label class="text-xs font-bold">สถานที่เกิดเหตุ</label><input type="text" id="e-locationName" class="w-full border p-2 rounded-lg"></div>
+                    <div class="col-span-3 border-t pt-2 mt-1">
+                        <label class="text-xs font-bold mb-1">ค้นหาพิกัดและปักหมุดใหม่</label>
+                        <div class="flex gap-2 mb-2">
+                            <input type="text" id="e-searchInput" class="w-full border border-blue-300 p-2 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500" placeholder="🔍 พิมพ์ชื่อสถานที่..." onkeypress="if(event.key==='Enter'){event.preventDefault(); searchLocation('e');}">
+                            <button type="button" onclick="searchLocation('e')" class="bg-blue-600 text-white px-3 rounded-lg text-sm font-bold hover:bg-blue-700 shadow whitespace-nowrap"><i class="fa-solid fa-search"></i> ค้นหา</button>
+                        </div>
+                        <div id="editMap" class="h-48 w-full rounded-xl border-2 border-gray-300 shadow-inner z-0 mb-2"></div>
+                    </div>
+                    <div><label class="text-xs font-bold">Latitude</label><input type="text" id="e-lat" class="w-full border p-2 rounded-lg" oninput="updateEditMapFromInput()" required></div>
+                    <div><label class="text-xs font-bold">Longitude</label><input type="text" id="e-lng" class="w-full border p-2 rounded-lg" required></div>
+                    <div><label class="text-xs font-bold">หมายเหตุ</label><input type="text" id="e-note" class="w-full border p-2 rounded-lg"></div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6 bg-gray-200 p-3 rounded-xl border border-gray-300">
+                    <div><label class="text-xs font-bold text-gray-600">ผู้บันทึกข้อมูล (ไม่อนุญาตให้แก้ไข)</label><input type="text" id="e-recorder" class="w-full border p-2 rounded-lg bg-gray-100 text-gray-500 cursor-not-allowed font-bold" readonly></div>
+                    <div><label class="text-xs font-bold text-gray-600">ทีมปฏิบัติการ (ไม่อนุญาตให้แก้ไข)</label><input type="text" id="e-team" class="w-full border p-2 rounded-lg bg-gray-100 text-gray-500 cursor-not-allowed font-bold" readonly></div>
+                </div>
+                <div class="flex justify-end gap-2">
+                    <button type="button" onclick="closeEditModal()" class="bg-gray-400 text-white px-4 py-2 rounded-xl font-bold">ยกเลิก</button>
+                    <button type="submit" class="bg-blue-600 text-white px-6 py-2 rounded-xl font-bold"><i class="fa-solid fa-save mr-1"></i> บันทึก</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <script>
+    // ===== 🌌 STAR FIELD GENERATOR =====
+    (function createStarField() {
+        const sidebar = document.getElementById('sidebar');
+        if (!sidebar) return;
+
+        // สร้าง container ดาว
+        const field = document.createElement('div');
+        field.className = 'star-field';
+
+        // สร้าง nebula glow 2 อัน
+        const nebulaColors = [
+            'radial-gradient(circle, rgba(100,149,237,0.4) 0%, transparent 70%)',
+            'radial-gradient(circle, rgba(147,112,219,0.3) 0%, transparent 70%)'
+        ];
+        nebulaColors.forEach((color, i) => {
+            const neb = document.createElement('div');
+            neb.className = 'nebula';
+            neb.style.cssText = `
+                width: ${120 + i*60}px; height: ${120 + i*60}px;
+                background: ${color};
+                top: ${i === 0 ? '15%' : '55%'};
+                left: ${i === 0 ? '-20%' : '30%'};
+                animation-delay: ${i * 3}s;
+            `;
+            field.appendChild(neb);
+        });
+
+        // สร้างดาว 80 ดวง
+        const starCount = 80;
+        for (let i = 0; i < starCount; i++) {
+            const star = document.createElement('div');
+            star.className = 'star';
+
+            const size = Math.random() < 0.7 ? 1 : Math.random() < 0.85 ? 2 : 3;
+            const x = Math.random() * 100;
+            const y = Math.random() * 100;
+            const dur = (2 + Math.random() * 4).toFixed(1);
+            const delay = (Math.random() * 5).toFixed(1);
+            const bright = (0.4 + Math.random() * 0.6).toFixed(2);
+            const driftDur = (6 + Math.random() * 8).toFixed(1);
+
+            star.style.cssText = `
+                width: ${size}px; height: ${size}px;
+                left: ${x}%; top: ${y}%;
+                --dur: ${dur}s;
+                --bright: ${bright};
+                animation: starTwinkle ${dur}s ${delay}s ease-in-out infinite,
+                           starDrift ${driftDur}s ${delay}s ease-in-out infinite;
+                box-shadow: 0 0 ${size + 1}px ${size}px rgba(255,255,255,0.3);
+            `;
+
+            // ดาวสีพิเศษ 15% ของดาวทั้งหมด
+            if (Math.random() < 0.15) {
+                const colors = [
+                    'rgba(100,149,237,1)',   // cornflower blue
+                    'rgba(147,112,219,1)',   // medium purple
+                    'rgba(135,206,250,1)',   // light sky blue
+                ];
+                star.style.background = colors[Math.floor(Math.random() * colors.length)];
+            }
+
+            field.appendChild(star);
+        }
+
+        // ใส่ไว้เป็น element แรกของ sidebar
+        sidebar.insertBefore(field, sidebar.firstChild);
+    })();
+    </script>
+
+
+    <?!= include('JS'); ?>
+</body>
+</html>
